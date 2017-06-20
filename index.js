@@ -8,7 +8,7 @@ const RNRxBluetooth = NativeModules.RNRxBluetooth;
  * @param  {Function} handler Event handler
  */
 RNRxBluetooth.on = (eventName, handler) => {
-  DeviceEventEmitter.addListener(eventName, handler)
+  DeviceEventEmitter.addListener(eventName, handler);
 }
 
 /**
@@ -17,7 +17,7 @@ RNRxBluetooth.on = (eventName, handler) => {
  * @param  {Function} handler Event handler
  */
 RNRxBluetooth.removeListener = (eventName, handler) => {
-  DeviceEventEmitter.removeListener(eventName, handler)
+  DeviceEventEmitter.removeListener(eventName, handler);
 }
 
 module.exports = RNRxBluetooth;

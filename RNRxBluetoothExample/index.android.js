@@ -10,8 +10,30 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  TouchableHighlight,
+  View,
+  ScrollView
 } from 'react-native';
+import _ from 'lodash';
+
+const DeviceList = ({ devices, onDevicePress }) =>
+  <ScrollView style={styles.container}>
+    <View style={styles.listContainer}>
+      {devices.map((device, i) => {
+        return (
+          <TouchableHighlight
+            underlayColor='#DDDDDD'
+            key={`${device.address}`}
+            style={styles.listItem} onPress={() => onDevicePress(device)}>
+              <View style={{ justifyContent: 'space-between', flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ fontWeight: 'bold' }}>{device.name}</Text>
+                <Text>{`<${device.address}>`}</Text>
+              </View>
+          </TouchableHighlight>
+        )
+      })}
+    </View>
+  </ScrollView>
 
 const Button = ({ title, onPress, style, textStyle }) =>
   <TouchableOpacity style={[ styles.button, style ]} onPress={onPress}>
@@ -22,9 +44,44 @@ import RNRxBluetooth from 'rnrxbluetooth';
 
 export default class RNRxBluetoothExample extends Component {
 
+  constructor() {
+    super();
+    this.state = {
+      discoveryStarted: false,
+      discoveredDevices: []
+    }
+
+    RNRxBluetooth.on('discoveryStart', () => {
+      console.log('discovery: start');
+      this.setState({ discoveryStarted: true });
+    });
+
+    RNRxBluetooth.on('discoveryEnd', () => {
+      console.log('discovery: end');
+      this.setState({ discoveryStarted: false });
+    });
+
+    RNRxBluetooth.on('device', (device) => {
+      console.log('device discovered:', device.address);
+      const devices = this.state.discoveredDevices;
+      devices.push(device);
+      this.setState({ discoveredDevices: _.uniqBy(devices, (dev) => dev.address) });
+    })
+  }
+
   startDiscovery() {
     RNRxBluetooth.startDiscovery();
   }
+
+  cancelDiscovery() {
+    RNRxBluetooth.cancelDiscovery();
+  }
+
+  onDevicePress(device) {
+    //TODO : connect !
+    console.log('device pressed' + device.address);
+  }
+
   render() {
     return (
       <View style={styles.container}>
@@ -34,8 +91,11 @@ export default class RNRxBluetoothExample extends Component {
         <Button
           textStyle={{ color: '#FFFFFF' }}
             style={styles.buttonRaised}
-            title='Start Discovery'
-            onPress={() => this.startDiscovery()} />
+            title={this.state.discoveryStarted ? 'Cancel Discovery': 'Start Discovery'}
+            onPress={this.state.discoveryStarted ? () => this.cancelDiscovery(): () => this.startDiscovery()} />
+        <DeviceList
+            devices={this.state.discoveredDevices}
+            onDevicePress={(device) => this.onDevicePress(device)} />
       </View>
     );
   }
