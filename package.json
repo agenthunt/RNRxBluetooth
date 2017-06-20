@@ -1,0 +1,29 @@
+{
+  "name": "rnrxbluetooth",
+  "version": "1.0.0-rc1",
+  "description": "'React native Reactivex bluetooth for android'",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eove/RNRxBluetooth.git"
+  },
+  "keywords": [
+    "bluetooth",
+    "react-native"
+  ],
+  "author": "Peio Roth <peio.roth@eove.fr>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/eove/RNRxBluetooth/issues"
+  },
+  "homepage": "https://github.com/eove/RNRxBluetooth#readme",
+  "dependencies": {
+    "buffer": "^4.6.0"
+  },
+  "peerDependencies": {
+    "react-native": ">=0.40"
+  }
+}
