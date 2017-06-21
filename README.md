@@ -1,25 +1,20 @@
 # RNRxBluetooth
-React Native Reactive Bluetooth Library
 
+React Native Reactive Bluetooth Library which let you interact with Bluetooth devices [reactively](http://reactivex.io/) from your [React Native](https://facebook.github.io/react-native) application.
 
+This is a simple wrapper around underlying Android and iOS libraries. Current support is:
++ Android, using [RxBluetooth](https://github.com/IvBaranov/RxBluetooth): :white_check_mark:
++ iOS, using [RxBluetoothKit](https://github.com/Polidea/RxBluetoothKit): :x:  *(any help appreciated)*
 
-# Derived work
+# Example
 
-This is a derived work from Ivan Baranov's [RxBluetooth](https://github.com/IvBaranov/RxBluetooth) library. The goal is to make the initial RXBluetooth available for [React Native](https://facebook.github.io/react-native) applications.
+Go to the `./RNRxBluetoothExample` and run the following commands:
 
 ```
-Copyright 2017 Eove
-Copyright 2015 Ivan Baranov
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-   http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+npm install
+react-native run-android # or react-native run-ios when supported
 ```
+
+# Thanks!
+
+Thanks a lot to [RxBluetooth](https://github.com/IvBaranov/RxBluetooth) and [RxBluetoothKit](https://github.com/Polidea/RxBluetoothKit) maintainers and contributors!
