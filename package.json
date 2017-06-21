@@ -1,5 +1,5 @@
 {
-  "name": "@org_scope/rnrxbluetooth",
+  "name": "@eove/rnrxbluetooth",
   "version": "0.1.0",
   "description": "'React native reactivex bluetooth library'",
   "main": "index.js",
