@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import RNRxBluetooth from 'rnrxbluetooth';
 import _ from 'lodash';
+import debug from 'debug';
 
 import DeviceList from './DeviceList';
 import Button from './Button';
@@ -14,6 +15,8 @@ export default class RNRxBluetoothExample extends Component {
 
   constructor() {
     super();
+    this.debug = debug('RNRxBluetoothExample');
+    this.debug.enabled = true;
     this.state = {
       discoveryStarted: false,
       discoveredDevices: [],
@@ -21,29 +24,31 @@ export default class RNRxBluetoothExample extends Component {
     };
 
     RNRxBluetooth.on('discoveryStart', () => {
-      console.log('discovery: start');
+      this.debug('discovery: start');
       this.setState({ discoveryStarted: true });
     });
 
     RNRxBluetooth.on('discoveryEnd', () => {
-      console.log('discovery: end');
+      this.debug('discovery: end');
       this.setState({ discoveryStarted: false });
     });
 
     RNRxBluetooth.on('device', (device) => {
-      console.log('device discovered:', device.address, device.name);
+      const { address, name } = device;
+      this.debug(`discovered: ${address} ${name}`);
       const devices = this.state.discoveredDevices;
       devices.push(device);
       this.setState({ discoveredDevices: _.uniqBy(devices, (dev) => dev.address) });
     });
 
     RNRxBluetooth.on('connected', (device) => {
-      console.log('connected to:', device.address, device.name);
+      const { address, name } = device;
+      this.debug(`connected to: ${address} ${name}`);
       this.setState({ connectedDevice: device });
     });
 
-    RNRxBluetooth.on('data', (data) => {
-      console.log('rec: ' + data.payload);
+    RNRxBluetooth.on('data', ({ payload }) => {
+      this.debug(`bytes received: ${payload}`);
     });
   }
 
@@ -55,8 +60,8 @@ export default class RNRxBluetoothExample extends Component {
     RNRxBluetooth.cancelDiscovery();
   }
 
-  onDevicePress(device) {
-    RNRxBluetooth.connect(device.address);
+  onDevicePress({ address }) {
+    RNRxBluetooth.connect(address);
   }
 
   render() {
