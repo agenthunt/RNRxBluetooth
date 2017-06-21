@@ -16,8 +16,9 @@ export default class RNRxBluetoothExample extends Component {
     super();
     this.state = {
       discoveryStarted: false,
-      discoveredDevices: []
-    }
+      discoveredDevices: [],
+      connectedDevice: undefined
+    };
 
     RNRxBluetooth.on('discoveryStart', () => {
       console.log('discovery: start');
@@ -30,11 +31,20 @@ export default class RNRxBluetoothExample extends Component {
     });
 
     RNRxBluetooth.on('device', (device) => {
-      console.log('device discovered:', device.address);
+      console.log('device discovered:', device.address, device.name);
       const devices = this.state.discoveredDevices;
       devices.push(device);
       this.setState({ discoveredDevices: _.uniqBy(devices, (dev) => dev.address) });
-    })
+    });
+
+    RNRxBluetooth.on('connected', (device) => {
+      console.log('connected to:', device.address, device.name);
+      this.setState({ connectedDevice: device });
+    });
+
+    RNRxBluetooth.on('data', (data) => {
+      console.log('rec: ' + data.payload);
+    });
   }
 
   startDiscovery() {
@@ -46,8 +56,7 @@ export default class RNRxBluetoothExample extends Component {
   }
 
   onDevicePress(device) {
-    //TODO : connect !
-    console.log('device pressed' + device.address);
+    RNRxBluetooth.connect(device.address);
   }
 
   render() {
@@ -63,6 +72,7 @@ export default class RNRxBluetoothExample extends Component {
             onPress={this.state.discoveryStarted ? () => this.cancelDiscovery(): () => this.startDiscovery()} />
         <DeviceList
             devices={this.state.discoveredDevices}
+            connectedDevice={this.state.connectedDevice}
             onDevicePress={(device) => this.onDevicePress(device)} />
       </View>
     );

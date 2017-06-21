@@ -2,6 +2,7 @@ package fr.eove.RNRxBluetooth;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
 import android.util.Log;
 
 import com.facebook.react.bridge.Arguments;
@@ -10,13 +11,17 @@ import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 
+import rx.Subscriber;
 import rx.Subscription;
 import rx.functions.Action1;
 
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 import com.github.ivbaranov.rxbluetooth.Action;
+import com.github.ivbaranov.rxbluetooth.BluetoothConnection;
 import com.github.ivbaranov.rxbluetooth.RxBluetooth;
+
+import java.util.UUID;
 
 import javax.annotation.Nullable;
 
@@ -26,17 +31,25 @@ import static fr.eove.RNRxBluetooth.RNRxBluetoothPackage.TAG;
 @SuppressWarnings("unused")
 public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements LifecycleEventListener {
 
-    private static final boolean D = false;
+    private static final boolean D = true;
+    static final UUID MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 
     private ReactApplicationContext mReactContext;
     private RxBluetooth rxBluetooth;
+
     private Subscription deviceSubscription;
     private Subscription discoveryStartSubscription;
     private Subscription discoveryFinishSubscription;
+    private Subscription deviceConnectSubscription;
+    private Subscription currentConnectionSubscription;
+
+    private BluetoothConnection currentConnection;
 
     private static final String BT_DISCOVERY_STARTED = "discoveryStart";
     private static final String BT_DISCOVERY_FINISHED = "discoveryEnd";
     private static final String BT_DISCOVERED_DEVICE = "device";
+    private static final String BT_RECEIVED_DATA = "data";
+    private static final String BT_CONNECTED_DEVICE = "connected";
 
     public RNRxBluetoothModule(ReactApplicationContext reactContext) {
         super(reactContext);
@@ -51,7 +64,7 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
                 .subscribe(new Action1<String>() {
                     @Override public void call(String action) {
                         if (D) Log.d(TAG, "Started discovery!");
-                        sendEvent(BT_DISCOVERY_STARTED, null);
+                        sendEventToJs(BT_DISCOVERY_STARTED, null);
                     }
                 });
 
@@ -60,7 +73,7 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
                 .subscribe(new Action1<String>() {
                     @Override public void call(String action) {
                         if (D) Log.d(TAG, "Finished discovery!");
-                        sendEvent(BT_DISCOVERY_FINISHED, null);
+                        sendEventToJs(BT_DISCOVERY_FINISHED, null);
                     }
                 });
 
@@ -68,12 +81,57 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
                 .subscribe(new Action1<BluetoothDevice>() {
                     @Override
                     public void call(BluetoothDevice bluetoothDevice) {
-                        WritableMap params = Arguments.createMap();
-                        params.putString("name", bluetoothDevice.getName());
-                        params.putString("address", bluetoothDevice.getAddress());
-                        sendEvent(BT_DISCOVERED_DEVICE, params);
+                        sendEventToJs(BT_DISCOVERED_DEVICE, RNRxBluetoothModule.createDevicePayload(bluetoothDevice));
                     }
                 });
+    }
+
+    private void installConnectionHandlerFor(final String address) {
+        final BluetoothDevice device = BluetoothAdapter.getDefaultAdapter().getRemoteDevice(address);
+        deviceConnectSubscription = rxBluetooth.observeConnectDevice(device, MY_UUID)
+                .subscribe(new Subscriber<BluetoothSocket>() {
+                    @Override
+                    public void onCompleted() {
+
+                    }
+
+                    @Override
+                    public void onError(Throwable connError) {
+                        if (D)  Log.e(TAG, "error when connecting to " + address, connError);
+                    }
+
+                    @Override
+                    public void onNext(BluetoothSocket bluetoothSocket) {
+                        try {
+                            currentConnection = new BluetoothConnection(bluetoothSocket);
+                            sendEventToJs(BT_CONNECTED_DEVICE, RNRxBluetoothModule.createDevicePayload(device));
+                            currentConnectionSubscription = currentConnection
+                                    .observeBytesStream(40)
+                                    .subscribe(new Action1<byte[]>() {
+                                        @Override
+                                        public void call(byte[] bytes) {
+                                            WritableMap params = Arguments.createMap();
+                                            params.putString("payload", bytes.toString());
+                                            sendEventToJs(BT_RECEIVED_DATA, params);
+                                        }
+                                    }, new Action1<Throwable>() {
+                                        @Override
+                                        public void call(Throwable socketError) {
+                                            if (D) Log.e(TAG, "error when receiving bytes", socketError);
+                                        }
+                                    });
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+    }
+
+    private static WritableMap createDevicePayload(BluetoothDevice device) {
+        WritableMap params = Arguments.createMap();
+        params.putString("name", device.getName());
+        params.putString("address", device.getAddress());
+        return params;
     }
 
     @Override
@@ -84,12 +142,20 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
 
     @ReactMethod
     public void startDiscovery() {
+        if (D) Log.e(TAG, "request discovery: start...");
         rxBluetooth.startDiscovery();
     }
 
     @ReactMethod
     public void cancelDiscovery() {
+        if (D) Log.e(TAG, "request discovery: cancel...");
         rxBluetooth.cancelDiscovery();
+    }
+
+    @ReactMethod
+    public void connect(String address) {
+        if (D) Log.e(TAG, "request connection to " + address);
+        installConnectionHandlerFor(address);
     }
 
     @Override
@@ -109,7 +175,10 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
         }
 
         unsubscribe(discoveryStartSubscription);
+        unsubscribe(discoveryFinishSubscription);
         unsubscribe(deviceSubscription);
+        unsubscribe(deviceConnectSubscription);
+        unsubscribe(currentConnectionSubscription);
     }
 
     private static void unsubscribe(Subscription subscription) {
@@ -119,12 +188,7 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
         }
     }
 
-    /**
-     * Send event to javascript
-     * @param eventName Name of the event
-     * @param params Additional params
-     */
-    private void sendEvent(String eventName, @Nullable WritableMap params) {
+    private void sendEventToJs(String eventName, @Nullable WritableMap params) {
         try {
             if (mReactContext.hasActiveCatalystInstance()) {
                 if (D) Log.d(TAG, "Sending event: " + eventName);

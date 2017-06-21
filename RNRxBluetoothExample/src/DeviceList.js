@@ -4,7 +4,8 @@ import {
   Text,
   TouchableHighlight,
   View,
-  ScrollView
+  ScrollView,
+  Image
 } from 'react-native';
 
 const styles = StyleSheet.create({
@@ -26,7 +27,7 @@ const styles = StyleSheet.create({
   }
 });
 
-export default ({ devices, onDevicePress }) =>
+export default ({ devices, connectedDevice, onDevicePress }) =>
     <ScrollView style={styles.container}>
       <View style={styles.listContainer}>
         {devices.map((device, i) => {
@@ -35,10 +36,19 @@ export default ({ devices, onDevicePress }) =>
               underlayColor='#DDDDDD'
               key={`${device.address}`}
               style={styles.listItem} onPress={() => onDevicePress(device)}>
+              <View style={{ flexDirection: 'row' }}>
+                <View style={{ width: 48, height: 24, opacity: 0.4 }}>
+                    {
+                      (connectedDevice && connectedDevice.address === device.address)
+                        ? <Image style={{ resizeMode: 'contain', width: 24, height: 24 }} source={require('./images/ic_done_black_24dp.png')} />
+                        : null
+                    }
+                </View>
                 <View style={{ justifyContent: 'space-between', flexDirection: 'row', alignItems: 'center' }}>
                   <Text style={{ fontWeight: 'bold' }}>{device.name}</Text>
-                  <Text>{`<${device.address}>`}</Text>
+                  <Text>{` <${device.address}>`}</Text>
                 </View>
+              </View>
             </TouchableHighlight>
           )
         })}
