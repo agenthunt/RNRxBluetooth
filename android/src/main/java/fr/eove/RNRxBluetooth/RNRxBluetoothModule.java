@@ -15,34 +15,21 @@ import rx.Subscriber;
 import rx.Subscription;
 import rx.functions.Action1;
 
+import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
+import com.facebook.react.bridge.WritableNativeArray;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 import com.github.ivbaranov.rxbluetooth.Action;
 import com.github.ivbaranov.rxbluetooth.BluetoothConnection;
 import com.github.ivbaranov.rxbluetooth.RxBluetooth;
 
-import java.util.Formatter;
+import com.google.common.primitives.UnsignedBytes;
+
 import java.util.UUID;
 
 import javax.annotation.Nullable;
 
 import static fr.eove.RNRxBluetooth.RNRxBluetoothPackage.TAG;
-
-class ReceivedData {
-    public final byte[] payload;
-
-    public ReceivedData(byte[] data) {
-        this.payload = data;
-    }
-
-    public String toString() {
-        Formatter formatter = new Formatter();
-        for (byte b : payload) {
-            formatter.format("%02x", b);
-        }
-        return formatter.toString();
-    }
-}
 
 
 @SuppressWarnings("unused")
@@ -128,7 +115,11 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
                                         @Override
                                         public void call(byte[] bytes) {
                                             WritableMap params = Arguments.createMap();
-                                            params.putString("payload", new ReceivedData(bytes).toString());
+                                            WritableArray data = new WritableNativeArray();
+                                            for (byte b : bytes) {
+                                                data.pushInt(UnsignedBytes.toInt(b));
+                                            }
+                                            params.putArray("payload", data);
                                             sendEventToJs(BT_RECEIVED_DATA, params);
                                         }
                                     }, new Action1<Throwable>() {
