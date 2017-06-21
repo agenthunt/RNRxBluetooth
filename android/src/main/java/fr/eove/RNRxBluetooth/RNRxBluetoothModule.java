@@ -21,11 +21,28 @@ import com.github.ivbaranov.rxbluetooth.Action;
 import com.github.ivbaranov.rxbluetooth.BluetoothConnection;
 import com.github.ivbaranov.rxbluetooth.RxBluetooth;
 
+import java.util.Formatter;
 import java.util.UUID;
 
 import javax.annotation.Nullable;
 
 import static fr.eove.RNRxBluetooth.RNRxBluetoothPackage.TAG;
+
+class ReceivedData {
+    public final byte[] payload;
+
+    public ReceivedData(byte[] data) {
+        this.payload = data;
+    }
+
+    public String toString() {
+        Formatter formatter = new Formatter();
+        for (byte b : payload) {
+            formatter.format("%02x", b);
+        }
+        return formatter.toString();
+    }
+}
 
 
 @SuppressWarnings("unused")
@@ -111,7 +128,7 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
                                         @Override
                                         public void call(byte[] bytes) {
                                             WritableMap params = Arguments.createMap();
-                                            params.putString("payload", bytes.toString());
+                                            params.putString("payload", new ReceivedData(bytes).toString());
                                             sendEventToJs(BT_RECEIVED_DATA, params);
                                         }
                                     }, new Action1<Throwable>() {
