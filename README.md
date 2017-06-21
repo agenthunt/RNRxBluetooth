@@ -6,7 +6,7 @@ This is a simple wrapper around underlying Android and iOS libraries. Current su
 + Android, using [RxBluetooth](https://github.com/IvBaranov/RxBluetooth): :white_check_mark:
 + iOS, using [RxBluetoothKit](https://github.com/Polidea/RxBluetoothKit): :x:  *(any help appreciated)*
 
-# Example
+# Run the example
 
 Go to the `./RNRxBluetoothExample` and run the following commands:
 
