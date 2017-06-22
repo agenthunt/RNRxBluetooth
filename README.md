@@ -22,9 +22,9 @@ From top dir:
 + `yarn install` (or npm install)
 + `react-native link`
 
-Then, in one term, launch package manager from top directory `npm start -- --reset-cache`
+Then, in one terminal, launch package manager from top directory `npm start -- --reset-cache`
 
-And in another term, `react-native run-android`
+And in another terminal, `react-native run-android`
 
 **/!\ Be sure to:**
 + Run the example with a real device as there isn't any simulator supporting bluetooth emulation.
