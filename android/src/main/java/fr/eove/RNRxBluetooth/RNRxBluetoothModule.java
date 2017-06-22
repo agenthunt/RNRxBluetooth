@@ -110,7 +110,7 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
                             currentConnection = new BluetoothConnection(bluetoothSocket);
                             sendEventToJs(BT_CONNECTED_DEVICE, RNRxBluetoothModule.createDevicePayload(device));
                             currentConnectionSubscription = currentConnection
-                                    .observeBytesStream(40)
+                                    .observeByteArraysStream(40)
                                     .subscribe(new Action1<byte[]>() {
                                         @Override
                                         public void call(byte[] bytes) {
