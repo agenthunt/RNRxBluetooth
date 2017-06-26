@@ -14,6 +14,7 @@ import com.facebook.react.bridge.ReactMethod;
 import rx.Subscriber;
 import rx.Subscription;
 import rx.functions.Action1;
+import rx.schedulers.Schedulers;
 
 import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
@@ -64,6 +65,8 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
 
     private void installSubscriptions() {
         discoveryStartSubscription = rxBluetooth.observeDiscovery()
+                .observeOn(Schedulers.computation())
+                .subscribeOn(Schedulers.computation())
                 .filter(Action.isEqualTo(BluetoothAdapter.ACTION_DISCOVERY_STARTED))
                 .subscribe(new Action1<String>() {
                     @Override public void call(String action) {
@@ -73,6 +76,8 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
                 });
 
         discoveryFinishSubscription = rxBluetooth.observeDiscovery()
+                .observeOn(Schedulers.computation())
+                .subscribeOn(Schedulers.computation())
                 .filter(Action.isEqualTo(BluetoothAdapter.ACTION_DISCOVERY_FINISHED))
                 .subscribe(new Action1<String>() {
                     @Override public void call(String action) {
@@ -82,6 +87,8 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
                 });
 
         deviceSubscription = rxBluetooth.observeDevices()
+                .observeOn(Schedulers.computation())
+                .subscribeOn(Schedulers.computation())
                 .subscribe(new Action1<BluetoothDevice>() {
                     @Override
                     public void call(BluetoothDevice bluetoothDevice) {
@@ -93,6 +100,8 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
     private void installConnectionHandlerFor(final String address) {
         final BluetoothDevice device = BluetoothAdapter.getDefaultAdapter().getRemoteDevice(address);
         deviceConnectSubscription = rxBluetooth.observeConnectDevice(device, MY_UUID)
+                .observeOn(Schedulers.computation())
+                .subscribeOn(Schedulers.computation())
                 .subscribe(new Subscriber<BluetoothSocket>() {
                     @Override
                     public void onCompleted() {
@@ -111,6 +120,8 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
                             sendEventToJs(BT_CONNECTED_DEVICE, RNRxBluetoothModule.createDevicePayload(device));
                             currentConnectionSubscription = currentConnection
                                     .observeByteArraysStream(40)
+                                    .observeOn(Schedulers.computation())
+                                    .subscribeOn(Schedulers.computation())
                                     .subscribe(new Action1<byte[]>() {
                                         @Override
                                         public void call(byte[] bytes) {
