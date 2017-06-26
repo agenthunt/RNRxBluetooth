@@ -3,6 +3,7 @@ package fr.eove.RNRxBluetooth;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
+import android.util.Base64;
 import android.util.Log;
 
 import com.facebook.react.bridge.Arguments;
@@ -175,6 +176,12 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
     public void connect(String address) {
         if (D) Log.e(TAG, "request connection to " + address);
         installConnectionHandlerFor(address);
+    }
+
+    @ReactMethod
+    public void sendBase64String(String message) {
+        byte[] data = Base64.decode(message, Base64.DEFAULT);
+        currentConnection.send(data);
     }
 
     @Override
