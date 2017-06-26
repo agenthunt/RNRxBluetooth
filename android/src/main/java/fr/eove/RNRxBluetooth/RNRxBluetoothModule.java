@@ -179,9 +179,9 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
     }
 
     @ReactMethod
-    public void sendBase64String(String message) {
+    public boolean sendBase64String(String message) {
         byte[] data = Base64.decode(message, Base64.DEFAULT);
-        currentConnection.send(data);
+        return currentConnection.send(data);
     }
 
     @Override
