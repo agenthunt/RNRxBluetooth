@@ -1,6 +1,6 @@
 # RNRxBluetooth
 
-React Native Reactive Bluetooth Library which let you interact with Bluetooth devices [reactively](http://reactivex.io/) from your [React Native](https://facebook.github.io/react-native) application.
+React Native Reactive Bluetooth Library lets you interact with Bluetooth devices [reactively](http://reactivex.io/) from your [React Native](https://facebook.github.io/react-native) application.
 
 This is a simple wrapper around underlying Android and iOS libraries. Current support is:
 + Android, using [RxBluetooth](https://github.com/IvBaranov/RxBluetooth): :white_check_mark:
