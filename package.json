@@ -1,6 +1,6 @@
 {
   "name": "@eove/rnrxbluetooth",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "'React native reactivex bluetooth library'",
   "main": "index.js",
   "repository": {
