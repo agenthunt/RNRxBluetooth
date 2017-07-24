@@ -25,6 +25,7 @@ import com.github.ivbaranov.rxbluetooth.Action;
 import com.github.ivbaranov.rxbluetooth.BluetoothConnection;
 import com.github.ivbaranov.rxbluetooth.RxBluetooth;
 
+import com.github.ivbaranov.rxbluetooth.events.ConnectionStateEvent;
 import com.google.common.primitives.UnsignedBytes;
 
 import java.util.UUID;
@@ -48,6 +49,7 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
     private Subscription discoveryFinishSubscription;
     private Subscription deviceConnectSubscription;
     private Subscription currentConnectionSubscription;
+    private Subscription connectionStateSubscription;
 
     private BluetoothConnection currentConnection;
 
@@ -55,7 +57,8 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
     private static final String BT_DISCOVERY_FINISHED = "discoveryEnd";
     private static final String BT_DISCOVERED_DEVICE = "device";
     private static final String BT_RECEIVED_DATA = "data";
-    private static final String BT_CONNECTED_DEVICE = "connected";
+    private static final String BT_CONNECTED = "connected";
+    private static final String BT_DISCONNECTED = "disconnected";
 
     public RNRxBluetoothModule(ReactApplicationContext reactContext) {
         super(reactContext);
@@ -96,6 +99,23 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
                         sendEventToJs(BT_DISCOVERED_DEVICE, RNRxBluetoothModule.createDevicePayload(bluetoothDevice));
                     }
                 });
+        connectionStateSubscription = rxBluetooth.observeConnectionState()
+                .observeOn(Schedulers.computation())
+                .subscribeOn(Schedulers.computation())
+                .subscribe(new Action1<ConnectionStateEvent>() {
+                    @Override
+                    public void call(ConnectionStateEvent connectionStateEvent) {
+                        int state = connectionStateEvent.getState();
+                        int previousState = connectionStateEvent.getPreviousState();
+                        BluetoothDevice device = connectionStateEvent.getBluetoothDevice();
+                        if (state == BluetoothAdapter.STATE_CONNECTED) {
+                            sendEventToJs(BT_CONNECTED, RNRxBluetoothModule.createDevicePayload(device));
+                        }
+                        if (state == BluetoothAdapter.STATE_DISCONNECTED) {
+                            sendEventToJs(BT_DISCONNECTED, RNRxBluetoothModule.createDevicePayload(device));
+                        }
+                    }
+                });
     }
 
     private void installConnectionHandlerFor(final String address) {
@@ -118,7 +138,6 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
                     public void onNext(BluetoothSocket bluetoothSocket) {
                         try {
                             currentConnection = new BluetoothConnection(bluetoothSocket);
-                            sendEventToJs(BT_CONNECTED_DEVICE, RNRxBluetoothModule.createDevicePayload(device));
                             currentConnectionSubscription = currentConnection
                                     .observeByteArraysStream(40)
                                     .observeOn(Schedulers.computation())
@@ -205,6 +224,7 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
         unsubscribe(deviceSubscription);
         unsubscribe(deviceConnectSubscription);
         unsubscribe(currentConnectionSubscription);
+        unsubscribe(connectionStateSubscription);
     }
 
     private static void unsubscribe(Subscription subscription) {

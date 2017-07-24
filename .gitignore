@@ -16,3 +16,4 @@ gradle-app.setting
 *.iml
 **/*.idea/
 npm-debug.log
+local.properties
