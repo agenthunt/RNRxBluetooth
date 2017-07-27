@@ -181,19 +181,19 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
 
     @ReactMethod
     public void startDiscovery() {
-        if (D) Log.e(TAG, "request discovery: start...");
+        if (D) Log.d(TAG, "request discovery: start...");
         rxBluetooth.startDiscovery();
     }
 
     @ReactMethod
     public void cancelDiscovery() {
-        if (D) Log.e(TAG, "request discovery: cancel...");
+        if (D) Log.d(TAG, "request discovery: cancel...");
         rxBluetooth.cancelDiscovery();
     }
 
     @ReactMethod
     public void connect(String address) {
-        if (D) Log.e(TAG, "request connection to " + address);
+        if (D) Log.d(TAG, "request connection to " + address);
         installConnectionHandlerFor(address);
     }
 
