@@ -25,7 +25,7 @@ import com.github.ivbaranov.rxbluetooth.Action;
 import com.github.ivbaranov.rxbluetooth.BluetoothConnection;
 import com.github.ivbaranov.rxbluetooth.RxBluetooth;
 
-import com.github.ivbaranov.rxbluetooth.events.ConnectionStateEvent;
+import com.github.ivbaranov.rxbluetooth.events.AclEvent;
 import com.google.common.primitives.UnsignedBytes;
 
 import java.util.UUID;
@@ -73,8 +73,11 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
                 .subscribeOn(Schedulers.computation())
                 .filter(Action.isEqualTo(BluetoothAdapter.ACTION_DISCOVERY_STARTED))
                 .subscribe(new Action1<String>() {
-                    @Override public void call(String action) {
-                        if (D) Log.d(TAG, "Started discovery!");
+                    @Override
+                    public void call(String action) {
+                        if (D) {
+                            Log.d(TAG, "Started discovery!");
+                        }
                         sendEventToJs(BT_DISCOVERY_STARTED, null);
                     }
                 });
@@ -84,8 +87,11 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
                 .subscribeOn(Schedulers.computation())
                 .filter(Action.isEqualTo(BluetoothAdapter.ACTION_DISCOVERY_FINISHED))
                 .subscribe(new Action1<String>() {
-                    @Override public void call(String action) {
-                        if (D) Log.d(TAG, "Finished discovery!");
+                    @Override
+                    public void call(String action) {
+                        if (D) {
+                            Log.d(TAG, "Finished discovery!");
+                        }
                         sendEventToJs(BT_DISCOVERY_FINISHED, null);
                     }
                 });
@@ -99,20 +105,21 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
                         sendEventToJs(BT_DISCOVERED_DEVICE, RNRxBluetoothModule.createDevicePayload(bluetoothDevice));
                     }
                 });
-        connectionStateSubscription = rxBluetooth.observeConnectionState()
+
+        connectionStateSubscription= rxBluetooth.observeAclEvent()
                 .observeOn(Schedulers.computation())
                 .subscribeOn(Schedulers.computation())
-                .subscribe(new Action1<ConnectionStateEvent>() {
+                .subscribe(new Action1<AclEvent>() {
                     @Override
-                    public void call(ConnectionStateEvent connectionStateEvent) {
-                        int state = connectionStateEvent.getState();
-                        int previousState = connectionStateEvent.getPreviousState();
-                        BluetoothDevice device = connectionStateEvent.getBluetoothDevice();
-                        if (state == BluetoothAdapter.STATE_CONNECTED) {
-                            sendEventToJs(BT_CONNECTED, RNRxBluetoothModule.createDevicePayload(device));
-                        }
-                        if (state == BluetoothAdapter.STATE_DISCONNECTED) {
-                            sendEventToJs(BT_DISCONNECTED, RNRxBluetoothModule.createDevicePayload(device));
+                    public void call(AclEvent aclEvent) {
+                        BluetoothDevice device = aclEvent.getBluetoothDevice();
+                        switch (aclEvent.getAction()) {
+                            case BluetoothDevice.ACTION_ACL_CONNECTED:
+                                sendEventToJs(BT_CONNECTED, RNRxBluetoothModule.createDevicePayload(device));
+                                break;
+                            case BluetoothDevice.ACTION_ACL_DISCONNECTED:
+                                sendEventToJs(BT_DISCONNECTED, RNRxBluetoothModule.createDevicePayload(device));
+                                break;
                         }
                     }
                 });
@@ -131,7 +138,9 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
 
                     @Override
                     public void onError(Throwable connError) {
-                        if (D)  Log.e(TAG, "error when connecting to " + address, connError);
+                        if (D) {
+                            Log.e(TAG, "error when connecting to " + address, connError);
+                        }
                     }
 
                     @Override
@@ -156,7 +165,9 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
                                     }, new Action1<Throwable>() {
                                         @Override
                                         public void call(Throwable socketError) {
-                                            if (D) Log.e(TAG, "error when receiving bytes", socketError);
+                                            if (D) {
+                                                Log.e(TAG, "error when receiving bytes", socketError);
+                                            }
                                         }
                                     });
                         } catch (Exception e) {
@@ -181,19 +192,25 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
 
     @ReactMethod
     public void startDiscovery() {
-        if (D) Log.d(TAG, "request discovery: start...");
+        if (D) {
+            Log.d(TAG, "request discovery: start...");
+        }
         rxBluetooth.startDiscovery();
     }
 
     @ReactMethod
     public void cancelDiscovery() {
-        if (D) Log.d(TAG, "request discovery: cancel...");
+        if (D) {
+            Log.d(TAG, "request discovery: cancel...");
+        }
         rxBluetooth.cancelDiscovery();
     }
 
     @ReactMethod
     public void connect(String address) {
-        if (D) Log.d(TAG, "request connection to " + address);
+        if (D) {
+            Log.d(TAG, "request connection to " + address);
+        }
         installConnectionHandlerFor(address);
     }
 
@@ -237,7 +254,9 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
     private void sendEventToJs(String eventName, @Nullable WritableMap params) {
         try {
             if (mReactContext.hasActiveCatalystInstance()) {
-                if (D) Log.d(TAG, "Sending event: " + eventName);
+                if (D) {
+                    Log.d(TAG, "Sending event: " + eventName);
+                }
                 mReactContext
                         .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
                         .emit(eventName, params);
@@ -246,6 +265,5 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
             error.printStackTrace();
             Log.e(TAG, error.toString());
         }
-
     }
 }
