@@ -5,32 +5,22 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.util.Base64;
 import android.util.Log;
-
-import com.facebook.react.bridge.Arguments;
-import com.facebook.react.bridge.LifecycleEventListener;
-import com.facebook.react.bridge.ReactApplicationContext;
-import com.facebook.react.bridge.ReactContextBaseJavaModule;
-import com.facebook.react.bridge.ReactMethod;
-
+import com.facebook.react.bridge.*;
+import com.facebook.react.modules.core.DeviceEventManagerModule;
+import com.github.ivbaranov.rxbluetooth.Action;
+import com.github.ivbaranov.rxbluetooth.BluetoothConnection;
+import com.github.ivbaranov.rxbluetooth.RxBluetooth;
+import com.github.ivbaranov.rxbluetooth.events.AclEvent;
+import com.google.common.primitives.UnsignedBytes;
 import rx.Subscriber;
 import rx.Subscription;
 import rx.functions.Action1;
 import rx.schedulers.Schedulers;
 
-import com.facebook.react.bridge.WritableArray;
-import com.facebook.react.bridge.WritableMap;
-import com.facebook.react.bridge.WritableNativeArray;
-import com.facebook.react.modules.core.DeviceEventManagerModule;
-import com.github.ivbaranov.rxbluetooth.Action;
-import com.github.ivbaranov.rxbluetooth.BluetoothConnection;
-import com.github.ivbaranov.rxbluetooth.RxBluetooth;
-
-import com.github.ivbaranov.rxbluetooth.events.AclEvent;
-import com.google.common.primitives.UnsignedBytes;
-
-import java.util.UUID;
-
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 import static fr.eove.RNRxBluetooth.RNRxBluetoothPackage.TAG;
 
@@ -39,17 +29,13 @@ import static fr.eove.RNRxBluetooth.RNRxBluetoothPackage.TAG;
 public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements LifecycleEventListener {
 
     private static final boolean D = true;
-    static final UUID MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+    private static final UUID MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 
     private ReactApplicationContext mReactContext;
     private RxBluetooth rxBluetooth;
 
-    private Subscription deviceSubscription;
-    private Subscription discoveryStartSubscription;
-    private Subscription discoveryFinishSubscription;
-    private Subscription deviceConnectSubscription;
-    private Subscription currentConnectionSubscription;
-    private Subscription connectionStateSubscription;
+    private List<Subscription> globalSubscriptions = new ArrayList<>();
+    private List<Subscription> connectionSubscriptions = new ArrayList<>();
 
     private BluetoothConnection currentConnection;
 
@@ -68,7 +54,7 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
     }
 
     private void installSubscriptions() {
-        discoveryStartSubscription = rxBluetooth.observeDiscovery()
+        globalSubscriptions.add(rxBluetooth.observeDiscovery()
                 .observeOn(Schedulers.computation())
                 .subscribeOn(Schedulers.computation())
                 .filter(Action.isEqualTo(BluetoothAdapter.ACTION_DISCOVERY_STARTED))
@@ -80,9 +66,10 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
                         }
                         sendEventToJs(BT_DISCOVERY_STARTED, null);
                     }
-                });
+                })
+        );
 
-        discoveryFinishSubscription = rxBluetooth.observeDiscovery()
+        globalSubscriptions.add(rxBluetooth.observeDiscovery()
                 .observeOn(Schedulers.computation())
                 .subscribeOn(Schedulers.computation())
                 .filter(Action.isEqualTo(BluetoothAdapter.ACTION_DISCOVERY_FINISHED))
@@ -94,9 +81,9 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
                         }
                         sendEventToJs(BT_DISCOVERY_FINISHED, null);
                     }
-                });
+                }));
 
-        deviceSubscription = rxBluetooth.observeDevices()
+        globalSubscriptions.add(rxBluetooth.observeDevices()
                 .observeOn(Schedulers.computation())
                 .subscribeOn(Schedulers.computation())
                 .subscribe(new Action1<BluetoothDevice>() {
@@ -104,9 +91,9 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
                     public void call(BluetoothDevice bluetoothDevice) {
                         sendEventToJs(BT_DISCOVERED_DEVICE, RNRxBluetoothModule.createDevicePayload(bluetoothDevice));
                     }
-                });
+                }));
 
-        connectionStateSubscription= rxBluetooth.observeAclEvent()
+        globalSubscriptions.add(rxBluetooth.observeAclEvent()
                 .observeOn(Schedulers.computation())
                 .subscribeOn(Schedulers.computation())
                 .subscribe(new Action1<AclEvent>() {
@@ -122,12 +109,13 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
                                 break;
                         }
                     }
-                });
+                }));
     }
 
     private void installConnectionHandlerFor(final String address) {
+        unsubscribeConnection();
         final BluetoothDevice device = BluetoothAdapter.getDefaultAdapter().getRemoteDevice(address);
-        deviceConnectSubscription = rxBluetooth.observeConnectDevice(device, MY_UUID)
+        connectionSubscriptions.add(rxBluetooth.observeConnectDevice(device, MY_UUID)
                 .observeOn(Schedulers.computation())
                 .subscribeOn(Schedulers.computation())
                 .subscribe(new Subscriber<BluetoothSocket>() {
@@ -147,7 +135,7 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
                     public void onNext(BluetoothSocket bluetoothSocket) {
                         try {
                             currentConnection = new BluetoothConnection(bluetoothSocket);
-                            currentConnectionSubscription = currentConnection
+                            connectionSubscriptions.add(currentConnection
                                     .observeByteArraysStream(40)
                                     .observeOn(Schedulers.computation())
                                     .subscribeOn(Schedulers.computation())
@@ -169,12 +157,12 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
                                                 Log.e(TAG, "error when receiving bytes", socketError);
                                             }
                                         }
-                                    });
+                                    }));
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
                     }
-                });
+                }));
     }
 
     private static WritableMap createDevicePayload(BluetoothDevice device) {
@@ -236,18 +224,29 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
             rxBluetooth.cancelDiscovery();
         }
 
-        unsubscribe(discoveryStartSubscription);
-        unsubscribe(discoveryFinishSubscription);
-        unsubscribe(deviceSubscription);
-        unsubscribe(deviceConnectSubscription);
-        unsubscribe(currentConnectionSubscription);
-        unsubscribe(connectionStateSubscription);
+        unsubscribeGlobal();
+        unsubscribeConnection();
+    }
+
+    private void unsubscribeGlobal() {
+        unsubscribeAll(globalSubscriptions);
+        globalSubscriptions = new ArrayList<>();
+    }
+
+    private void unsubscribeConnection() {
+        unsubscribeAll(connectionSubscriptions);
+        connectionSubscriptions = new ArrayList<>();
+    }
+
+    private static void unsubscribeAll(List<Subscription> subscriptions) {
+        for (Subscription subscription : subscriptions) {
+            unsubscribe(subscription);
+        }
     }
 
     private static void unsubscribe(Subscription subscription) {
-        if (subscription != null && !subscription.isUnsubscribed()) {
+        if (!subscription.isUnsubscribed()) {
             subscription.unsubscribe();
-            subscription = null;
         }
     }
 
