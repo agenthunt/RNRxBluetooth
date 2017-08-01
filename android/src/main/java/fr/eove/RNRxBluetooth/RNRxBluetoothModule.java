@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.util.Base64;
 import android.util.Log;
+
 import com.facebook.react.bridge.*;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 import com.github.ivbaranov.rxbluetooth.Action;
@@ -12,12 +13,14 @@ import com.github.ivbaranov.rxbluetooth.BluetoothConnection;
 import com.github.ivbaranov.rxbluetooth.RxBluetooth;
 import com.github.ivbaranov.rxbluetooth.events.AclEvent;
 import com.google.common.primitives.UnsignedBytes;
+
 import rx.Subscriber;
 import rx.Subscription;
 import rx.functions.Action1;
 import rx.schedulers.Schedulers;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -112,59 +115,6 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
                 }));
     }
 
-    private void installConnectionHandlerFor(final String address) {
-        unsubscribeConnection();
-        final BluetoothDevice device = BluetoothAdapter.getDefaultAdapter().getRemoteDevice(address);
-        connectionSubscriptions.add(rxBluetooth.observeConnectDevice(device, MY_UUID)
-                .observeOn(Schedulers.computation())
-                .subscribeOn(Schedulers.computation())
-                .subscribe(new Subscriber<BluetoothSocket>() {
-                    @Override
-                    public void onCompleted() {
-
-                    }
-
-                    @Override
-                    public void onError(Throwable connError) {
-                        if (D) {
-                            Log.e(TAG, "error when connecting to " + address, connError);
-                        }
-                    }
-
-                    @Override
-                    public void onNext(BluetoothSocket bluetoothSocket) {
-                        try {
-                            currentConnection = new BluetoothConnection(bluetoothSocket);
-                            connectionSubscriptions.add(currentConnection
-                                    .observeByteArraysStream(40)
-                                    .observeOn(Schedulers.computation())
-                                    .subscribeOn(Schedulers.computation())
-                                    .subscribe(new Action1<byte[]>() {
-                                        @Override
-                                        public void call(byte[] bytes) {
-                                            WritableMap params = Arguments.createMap();
-                                            WritableArray data = new WritableNativeArray();
-                                            for (byte b : bytes) {
-                                                data.pushInt(UnsignedBytes.toInt(b));
-                                            }
-                                            params.putArray("payload", data);
-                                            sendEventToJs(BT_RECEIVED_DATA, params);
-                                        }
-                                    }, new Action1<Throwable>() {
-                                        @Override
-                                        public void call(Throwable socketError) {
-                                            if (D) {
-                                                Log.e(TAG, "error when receiving bytes", socketError);
-                                            }
-                                        }
-                                    }));
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }));
-    }
-
     private static WritableMap createDevicePayload(BluetoothDevice device) {
         WritableMap params = Arguments.createMap();
         params.putString("name", device.getName());
@@ -195,17 +145,77 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
     }
 
     @ReactMethod
-    public void connect(String address) {
+    public void connect(final String address, final Promise promise) {
         if (D) {
             Log.d(TAG, "request connection to " + address);
         }
-        installConnectionHandlerFor(address);
+        unsubscribeConnection();
+        final BluetoothDevice device = BluetoothAdapter.getDefaultAdapter().getRemoteDevice(address);
+        connectionSubscriptions.add(rxBluetooth.observeConnectDevice(device, MY_UUID)
+                .observeOn(Schedulers.computation())
+                .subscribeOn(Schedulers.computation())
+                .subscribe(new Subscriber<BluetoothSocket>() {
+                    @Override
+                    public void onCompleted() {
+                    }
+
+                    @Override
+                    public void onError(Throwable connError) {
+                        if (D) {
+                            Log.e(TAG, "error when connecting to " + address, connError);
+                        }
+                        promise.reject(connError);
+                    }
+
+                    @Override
+                    public void onNext(BluetoothSocket bluetoothSocket) {
+                        try {
+                            createConnection(bluetoothSocket);
+                            promise.resolve(true);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            promise.reject(e);
+                        }
+                    }
+                }));
+    }
+
+    private void createConnection(BluetoothSocket bluetoothSocket) throws Exception {
+        currentConnection = new BluetoothConnection(bluetoothSocket);
+        connectionSubscriptions.add(currentConnection
+                .observeByteArraysStream(40)
+                .observeOn(Schedulers.computation())
+                .subscribeOn(Schedulers.computation())
+                .subscribe(new Action1<byte[]>() {
+                    @Override
+                    public void call(byte[] bytes) {
+                        onByteArraysStream(bytes);
+                    }
+                }, new Action1<Throwable>() {
+                    @Override
+                    public void call(Throwable socketError) {
+                        if (D) {
+                            Log.e(TAG, "error when receiving bytes", socketError);
+                        }
+                    }
+                }));
+    }
+
+    private void onByteArraysStream(byte[] bytes) {
+        WritableMap params = Arguments.createMap();
+        WritableArray data = new WritableNativeArray();
+        for (byte b : bytes) {
+            data.pushInt(UnsignedBytes.toInt(b));
+        }
+        params.putArray("payload", data);
+        sendEventToJs(BT_RECEIVED_DATA, params);
     }
 
     @ReactMethod
-    public boolean sendBase64String(String message) {
+    public void sendBase64String(String message, Promise promise) {
         byte[] data = Base64.decode(message, Base64.DEFAULT);
-        return currentConnection.send(data);
+        boolean result = currentConnection.send(data);
+        promise.resolve(result);
     }
 
     @Override
