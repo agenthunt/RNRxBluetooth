@@ -171,7 +171,7 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
                     public void onNext(BluetoothSocket bluetoothSocket) {
                         try {
                             createConnection(bluetoothSocket);
-                            promise.resolve(true);
+                            promise.resolve(RNRxBluetoothModule.createDevicePayload(device));
                         } catch (Exception e) {
                             e.printStackTrace();
                             promise.reject(e);
