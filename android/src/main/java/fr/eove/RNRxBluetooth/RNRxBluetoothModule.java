@@ -42,8 +42,8 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
 
     private BluetoothConnection currentConnection;
 
-    private static final String BT_DISCOVERY_STARTED = "discoveryStart";
-    private static final String BT_DISCOVERY_FINISHED = "discoveryEnd";
+    private static final String BT_DISCOVERY_START = "discoveryStart";
+    private static final String BT_DISCOVERY_STOP = "discoveryStop";
     private static final String BT_DISCOVERED_DEVICE = "device";
     private static final String BT_RECEIVED_DATA = "data";
     private static final String BT_CONNECTED = "connected";
@@ -67,7 +67,7 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
                         if (D) {
                             Log.d(TAG, "Started discovery!");
                         }
-                        sendEventToJs(BT_DISCOVERY_STARTED, null);
+                        sendEventToJs(BT_DISCOVERY_START, null);
                     }
                 })
         );
@@ -82,7 +82,7 @@ public class RNRxBluetoothModule extends ReactContextBaseJavaModule implements L
                         if (D) {
                             Log.d(TAG, "Finished discovery!");
                         }
-                        sendEventToJs(BT_DISCOVERY_FINISHED, null);
+                        sendEventToJs(BT_DISCOVERY_STOP, null);
                     }
                 }));
 
